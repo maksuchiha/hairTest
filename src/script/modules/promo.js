@@ -27,17 +27,17 @@ export const promo = () => {
 		index: '--i',
 	};
 
-	const VISIBLE_RANGE = 2;
-	const HIDDEN_POSITION = VISIBLE_RANGE + 1;
-	const TELEPORT_POSITION = HIDDEN_POSITION + 1;
-	const Z_INDEX_BASE = 100;
-	const SIXTH_SLIDE_INDEX = 5;
+	const CONFIG = {
+		visibleRange: 2,
+		hiddenPosition: 3,
+		teleportPosition: 4,
+		zIndexBase: 100,
+		activeImageIndex: 5,
+	};
 
 	const getSign = (value) => (value === 0 ? 0 : Math.sign(value));
-	const isHidden = (value) => Math.abs(value) >= HIDDEN_POSITION;
-	const isEdge = (value) => Math.abs(value) === VISIBLE_RANGE;
-
-	const initAllPromos = () => document.querySelectorAll(SELECTORS.root).forEach(initPromo);
+	const isHidden = (value) => Math.abs(value) >= CONFIG.hiddenPosition;
+	const isEdge = (value) => Math.abs(value) === CONFIG.visibleRange;
 
 	const bindIdsAndIndices = (buttons, slides) => {
 		const slideById = new Map();
@@ -45,7 +45,6 @@ export const promo = () => {
 		buttons.forEach((button, index) => {
 			const slide = slides[index];
 			const existingId = button.getAttribute(ATTRS.id) || slide?.getAttribute(ATTRS.id);
-
 			const id = existingId || String(index + 1);
 
 			button.setAttribute(ATTRS.id, id);
@@ -70,7 +69,6 @@ export const promo = () => {
 		if (!nav || !buttons.length || !slides.length) return;
 
 		const slideById = bindIdsAndIndices(buttons, slides);
-
 		const length = buttons.length;
 		const half = length / 2;
 
@@ -80,38 +78,47 @@ export const promo = () => {
 			if (delta > half) delta -= length;
 			if (delta < -half) delta += length;
 
-			const abs = Math.abs(delta);
-			if (abs <= VISIBLE_RANGE) return delta;
-
-			return getSign(delta) * HIDDEN_POSITION;
+			if (Math.abs(delta) <= CONFIG.visibleRange) return delta;
+			return getSign(delta) * CONFIG.hiddenPosition;
 		};
 
 		const foundIndex = buttons.findIndex((btn) => btn.classList.contains(CLASSES.activeButton));
 
 		let activeIndex = foundIndex >= 0 ? foundIndex : 0;
-
 		let activeButton = buttons[activeIndex];
 		let activeSlide = slideById.get(activeButton.getAttribute(ATTRS.id) || '') || null;
 
 		const setIndex = (button, value, persist = true) => {
 			const stringValue = String(value);
 			button.style.setProperty(CSS_VARS.indexFromCenter, stringValue);
-			button.style.zIndex = String(Z_INDEX_BASE - Math.abs(value));
+			button.style.zIndex = String(CONFIG.zIndexBase - Math.abs(value));
 			if (persist) button.dataset[DATA_KEYS.indexFromCenter] = stringValue;
 		};
 
 		const updateActiveImage = () => {
 			if (!image) return;
-			image.classList.toggle(CLASSES.activeImage, activeIndex === SIXTH_SLIDE_INDEX);
+			image.classList.toggle(CLASSES.activeImage, activeIndex === CONFIG.activeImageIndex);
 		};
 
-		const updatePositions = () => {
-			// from -> to, instant = без анимации (телепорт)
-			const ops = [];
+		const withNoTransition = (callback) => {
+			buttons.forEach((button) => button.classList.add(CLASSES.noTransition));
+			callback();
 
-			const addOp = (button, from, to, instant) => {
-				ops.push({ button, from, to, instant });
-			};
+			void nav.offsetWidth;
+			buttons.forEach((button) => button.classList.remove(CLASSES.noTransition));
+		};
+
+		const updatePositions = (isInitial = false) => {
+			if (isInitial) {
+				buttons.forEach((button, index) => {
+					const position = getPosition(activeIndex, index);
+					setIndex(button, position);
+				});
+				return;
+			}
+
+			const ops = [];
+			const addOp = (button, from, to, instant) => ops.push({ button, from, to, instant });
 
 			buttons.forEach((button, index) => {
 				const rawPrev = button.dataset[DATA_KEYS.indexFromCenter];
@@ -119,7 +126,6 @@ export const promo = () => {
 				const prev = hasPrev ? Number(rawPrev) : 0;
 				const nextBase = getPosition(activeIndex, index);
 
-				// первый проход — просто расставляем
 				if (!hasPrev) {
 					setIndex(button, nextBase);
 					return;
@@ -136,8 +142,7 @@ export const promo = () => {
 				const prevVisible = !prevHidden;
 				const nextVisible = !nextHidden;
 
-				const teleportIndex = (sign) => sign * TELEPORT_POSITION;
-
+				const teleportIndex = (sign) => sign * CONFIG.teleportPosition;
 				const edgeToEdge = prevVisible && nextVisible && signChanged && isEdge(prev) && isEdge(nextBase);
 
 				if (edgeToEdge) {
@@ -147,7 +152,7 @@ export const promo = () => {
 
 				if (prevVisible && nextHidden) {
 					if (signChanged) {
-						addOp(button, prev, getSign(prev) * HIDDEN_POSITION, false);
+						addOp(button, prev, getSign(prev) * CONFIG.hiddenPosition, false);
 					} else {
 						addOp(button, prev, nextBase, false);
 					}
@@ -156,7 +161,6 @@ export const promo = () => {
 
 				if (prevHidden && nextVisible) {
 					if (signChanged) {
-						// тут тоже телепортируем в реально скрытую точку новой стороны
 						addOp(button, teleportIndex(nextSign), nextBase, false);
 					} else {
 						addOp(button, prev, nextBase, false);
@@ -174,9 +178,7 @@ export const promo = () => {
 
 			if (!ops.length) return;
 
-			buttons.forEach((button) => {
-				button.classList.add(CLASSES.noTransition);
-			});
+			buttons.forEach((button) => button.classList.add(CLASSES.noTransition));
 
 			ops.forEach(({ button, from, to, instant }) => {
 				if (instant) {
@@ -188,13 +190,10 @@ export const promo = () => {
 
 			void nav.offsetWidth;
 
-			buttons.forEach((button) => {
-				button.classList.remove(CLASSES.noTransition);
-			});
+			buttons.forEach((button) => button.classList.remove(CLASSES.noTransition));
 
 			ops.forEach(({ button, to, instant }) => {
-				if (instant) return;
-				setIndex(button, to);
+				if (!instant) setIndex(button, to);
 			});
 		};
 
@@ -225,13 +224,15 @@ export const promo = () => {
 			updateActiveImage();
 		};
 
-		updatePositions();
-		setActiveButton(activeButton);
-		setActiveSlide(activeButton.getAttribute(ATTRS.id));
-		updateActiveImage();
+		withNoTransition(() => {
+			updatePositions(true);
+			setActiveButton(activeButton);
+			setActiveSlide(activeButton.getAttribute(ATTRS.id));
+			updateActiveImage();
+		});
 
-		nav.addEventListener('click', (event) => {
-			const button = event.target.closest(SELECTORS.button);
+		nav.addEventListener('click', ({ target }) => {
+			const button = target.closest(SELECTORS.button);
 			if (!button || !nav.contains(button)) return;
 
 			const index = buttons.indexOf(button);
@@ -239,6 +240,10 @@ export const promo = () => {
 
 			setActiveIndex(index);
 		});
+	};
+
+	const initAllPromos = () => {
+		document.querySelectorAll(SELECTORS.root).forEach((root) => initPromo(root));
 	};
 
 	initAllPromos();
