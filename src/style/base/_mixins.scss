@@ -1,0 +1,34 @@
+@mixin desktop() {
+    @media (max-width: 1239.9px) {
+        @content;
+    }
+}
+
+@mixin laptop() {
+    @media (max-width: 991.9px) {
+        @content;
+    }
+}
+
+@mixin tablet() {
+    @media (max-width: 767.9px) {
+        @content;
+    }
+}
+
+@mixin mobile() {
+    @media (max-width: 575.9px) {
+        @content;
+    }
+}
+
+@mixin hoverDesktop() {
+    @media (pointer: fine) {
+        @content;
+    }
+}
+@mixin hoverMobile() {
+    @media (pointer: coarse) {
+        @content;
+    }
+}

@@ -1,0 +1,33 @@
+{
+	"name": "hair",
+	"version": "1.0.0",
+	"scripts": {
+		"dev": "node --max-old-space-size=16384 node_modules/vite/bin/vite.js",
+		"build": "node --max-old-space-size=16384 node_modules/vite/bin/vite.js build",
+		"preview": "vite preview",
+		"prettier": "prettier . --write"
+	},
+	"devDependencies": {
+		"@eslint/js": "9.35.0",
+		"eslint": "9.35.0",
+		"eslint-config-prettier": "10.1.8",
+		"favicons": "7.2.0",
+		"globals": "16.4.0",
+		"imagemin": "9.0.1",
+		"imagemin-webp": "8.0.0",
+		"node-html-parser": "7.0.1",
+		"postcss": "8.5.6",
+		"postcss-preset-env": "10.4.0",
+		"prettier": "3.6.2",
+		"sass": "1.92.1",
+		"sharp": "0.34.4",
+		"vite": "7.2.2",
+		"vite-plugin-pwa": "1.0.3"
+	},
+	"dependencies": {
+		"swiper": "12.0.1"
+	},
+	"resolutions": {
+		"**/sharp": "0.34.4"
+	}
+}

@@ -1,0 +1,10 @@
+@use "@style/base/variables" as *;
+@use "@style/base/mixins" as *;
+
+.container {
+    position: relative;
+    max-width: 1240px;
+    width: 100%;
+    padding: 0 15px;
+    margin: 0 auto;
+}
